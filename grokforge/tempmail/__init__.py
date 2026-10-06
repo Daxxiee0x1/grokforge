@@ -1,12 +1,15 @@
 """
-Temp mail provider registry and factory.
+Public API of the tempmail package.
+
+Importing this module triggers loading of every provider module,
+which registers them with the registry.
 
 Usage
 -----
     from grokforge.tempmail import get_provider
 
-    ProviderClass = get_provider()          # uses TEMPMAIL_PROVIDER from .env
-    inbox = ProviderClass()                 # random address
+    ProviderClass = get_provider()     # uses TEMPMAIL_PROVIDER from .env
+    inbox = ProviderClass()
     inbox.create_inbox()
     code = inbox.wait_code()
 
@@ -14,6 +17,7 @@ Adding a new provider
 ---------------------
     1. Create grokforge/tempmail/providers/<name>.py
     2. Subclass BaseTempMail and decorate the class with @register("<name>")
+       (import register from grokforge.tempmail.registry)
     3. Import the module in grokforge/tempmail/providers/__init__.py
     4. Set TEMPMAIL_PROVIDER=<name> in .env
 """
@@ -23,39 +27,19 @@ from typing import Type
 
 from ..config import TEMPMAIL_PROVIDER
 from .base import BaseTempMail
+from .registry import register, available_providers, get_provider_class
 
-# Populate the registry by importing provider modules.
-from . import providers  # noqa: F401  (side-effect import)
-
-
-_REGISTRY: dict[str, Type[BaseTempMail]] = {}
-
-
-def register(name: str):
-    """Class decorator to register a temp mail provider under a name."""
-    def wrapper(cls: Type[BaseTempMail]) -> Type[BaseTempMail]:
-        _REGISTRY[name.lower()] = cls
-        return cls
-    return wrapper
-
-
-def available_providers() -> list[str]:
-    """Return the names of all registered providers."""
-    return sorted(_REGISTRY.keys())
+# Side-effect import: loads every provider module and populates the registry.
+from . import providers  # noqa: F401,E402
 
 
 def get_provider(name: str | None = None) -> Type[BaseTempMail]:
     """
-    Return the provider class registered under ``name``.
-    If ``name`` is None, uses TEMPMAIL_PROVIDER from .env.
+    Return the provider class for ``name``, or for TEMPMAIL_PROVIDER
+    from the .env file when ``name`` is None.
     """
     key = (name or TEMPMAIL_PROVIDER or "").lower()
-    if key not in _REGISTRY:
-        raise ValueError(
-            f"Unknown temp mail provider: {key!r}. "
-            f"Available: {available_providers()}"
-        )
-    return _REGISTRY[key]
+    return get_provider_class(key)
 
 
 __all__ = [

@@ -10,8 +10,8 @@ from ...config import (
     TEMPIK_BASE, TEMPIK_DEBUG, TEMPIK_DOMAINS, OTP_FALSE,
 )
 from ...utils import random_username, warn
-from .. import register
 from ..base import BaseTempMail
+from ..registry import register
 
 
 @register("tempik")
